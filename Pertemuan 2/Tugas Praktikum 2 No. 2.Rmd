@@ -1,0 +1,224 @@
+---
+title: "Tugas Praktikum 2 No. 2"
+author: "Fitria Angelita Delvi"
+date: "2026-08-30"
+output: html_document
+---
+
+# Input Data
+```{r}
+data2 <- data.frame(
+  year = 1975:2014,
+  sales = c(
+    11.7, 12.0, 12.3, 12.8, 13.1, 13.6, 13.9, 14.4, 14.7, 15.3,
+    15.5, 15.8, 16.1, 16.6, 16.9, 16.7, 16.9, 17.4, 17.6, 17.9,
+    18.0, 17.9, 18.0, 18.2, 18.2, 18.3, 18.6, 19.2, 19.3, 19.5,
+    19.2, 19.3, 19.5, 20.0, 20.0, 19.9, 19.8, 19.9, 20.2, 21.0
+  ),
+  advertising = c(
+    9.4, 9.6, 10.0, 10.4, 10.8, 10.9, 11.7, 12.2, 12.5, 12.9,
+    13.0, 13.2, 13.8, 14.2, 14.6, 14.4, 15.0, 15.4, 15.7, 15.9,
+    15.9, 16.0, 16.3, 16.2, 16.8, 17.3, 17.6, 18.1, 18.3, 18.5,
+    18.7, 18.9, 19.2, 20.0, 20.0, 20.3, 20.4, 21.0, 21.5, 22.1
+  )
+)
+```
+
+# Eksplorasi Data
+```{r}
+plot(
+  data2$advertising,
+  data2$sales,
+  pch = 19,
+  xlab = "Advertising",
+  ylab = "Sales",
+  main = "Scatterplot Advertising vs Sales"
+)
+
+abline(
+  lm(sales ~ advertising, data = data2),
+  lwd = 2
+)
+```
+
+Berdasarkan scatterplot, terlihat adanya hubungan positif dan cukup linear antara Advertising dan Sales. Semakin besar Advertising, maka Sales cenderung meningkat. Titik-titik pengamatan juga relatif dekat dengan garis regresi, sehingga hubungan kedua peubah terlihat cukup kuat.
+
+# Model OLS
+```{r}
+model_ols2 <- lm(
+  sales ~ advertising,
+  data = data2
+)
+
+summary(model_ols2)
+```
+
+Berdasarkan hasil regresi OLS, diperoleh persamaan Sales = 5.9651 + 0.7103 Advertising. Koefisien Advertising bernilai positif, sehingga peningkatan Advertising cenderung diikuti dengan peningkatan Sales. Koefisien Advertising juga signifikan pada taraf 5%. Nilai R-squared sebesar 0.9596 menunjukkan bahwa sekitar 95.96% variasi Sales dapat dijelaskan oleh Advertising.
+
+# Plot Sisaan
+```{r}
+resid_ols2 <- residuals(model_ols2)
+
+plot(
+  data2$year,
+  resid_ols2,
+  type = "b",
+  pch = 19,
+  xlab = "Tahun",
+  ylab = "Sisaan",
+  main = "Plot Sisaan Model OLS"
+)
+
+abline(h = 0, lty = 2)
+```
+
+Berdasarkan plot sisaan model OLS, sisaan tidak menyebar secara acak di sekitar garis nol dan terlihat adanya pola tertentu sepanjang waktu. Sisaan awalnya cenderung negatif, kemudian meningkat menjadi positif, dan kembali menurun menjadi negatif pada periode akhir. Pola tersebut mengindikasikan adanya autokorelasi pada sisaan, sehingga perlu dilakukan pengujian lebih lanjut menggunakan uji Durbin-Watson.
+
+# Durbin-Watson
+```{r}
+library(lmtest)
+
+dwtest(model_ols2)
+```
+
+Berdasarkan plot sisaan terlihat adanya pola pada sisaan. Hasil uji Durbin-Watson juga menghasilkan nilai DW sebesar 0.162 yang mengindikasikan adanya autokorelasi positif pada sisaan. Oleh karena itu, perlu dilakukan penanganan autokorelasi.
+
+# Cochrane-Orcutt
+```{r}
+library(orcutt)
+
+model_co2 <- cochrane.orcutt(model_ols2)
+
+summary(model_co2)
+```
+
+Berdasarkan hasil metode Cochrane-Orcutt, diperoleh model Sales = 10.2524 + 0.4885 Advertising. Koefisien Advertising bernilai positif dan signifikan dengan p-value sebesar 1.426e-07, sehingga peningkatan Advertising cenderung diikuti dengan peningkatan Sales. Nilai R-squared sebesar 0.5313 menunjukkan bahwa 53.13% variasi Sales pada model transformasi dapat dijelaskan oleh Advertising. Pada model awal diperoleh nilai Durbin-Watson sebesar 0.16204 dengan p-value 8.935e-20 yang menunjukkan adanya autokorelasi positif. Setelah dilakukan transformasi Cochrane-Orcutt, nilai Durbin-Watson meningkat menjadi 1.93925 dengan p-value 0.378. Karena p-value > 0.05 dan nilai DW mendekati 2, tidak terdapat bukti adanya autokorelasi positif pada sisaan setelah dilakukan penanganan.
+
+# Plot Residual Setelah Cochrane-Orcutt
+```{r}
+resid_co2 <- residuals(model_co2)
+
+plot(
+  resid_co2,
+  type = "b",
+  pch = 19,
+  xlab = "Urutan Observasi",
+  ylab = "Sisaan",
+  main = "Plot Sisaan Setelah Cochrane-Orcutt"
+)
+
+abline(h = 0, lty = 2)
+```
+
+Berdasarkan plot sisaan setelah dilakukan Cochrane-Orcutt, sisaan terlihat lebih mendekati garis nol dan pola autokorelasi pada model awal sudah jauh berkurang. Meskipun pada beberapa observasi awal masih terlihat pola kenaikan sisaan, secara keseluruhan sisaan tidak menunjukkan pola yang sekuat pada model OLS. Hasil ini menunjukkan bahwa metode Cochrane-Orcutt telah membantu mengurangi autokorelasi pada sisaan.
+
+# Hildreth-Lu
+```{r}
+rho_grid <- seq(0, 0.99, by = 0.01)
+
+hasil_hl2 <- data.frame(
+  rho = rho_grid,
+  SSE = sapply(rho_grid, function(rho) {
+
+    y_star <- data2$sales[-1] -
+      rho * data2$sales[-nrow(data2)]
+
+    x_star <- data2$advertising[-1] -
+      rho * data2$advertising[-nrow(data2)]
+
+    model <- lm(y_star ~ x_star)
+
+    sum(resid(model)^2)
+  })
+)
+
+hasil_hl2[which.min(hasil_hl2$SSE), ]
+```
+
+Berdasarkan pencarian awal nilai rho dengan metode Hildreth-Lu, diperoleh nilai rho = 0.90 yang menghasilkan nilai SSE terkecil, yaitu sebesar 1.291395. Oleh karena itu, nilai rho = 0.90 digunakan sebagai acuan untuk melakukan pencarian rho yang lebih rinci di sekitar nilai tersebut.
+
+# Perhalus Rho
+```{r}
+rho_fine2 <- seq(0.89, 0.91, by = 0.001)
+
+hasil_fine2 <- data.frame(
+  rho = rho_fine2,
+  SSE = sapply(rho_fine2, function(rho) {
+
+    y_star <- data2$sales[-1] -
+      rho * data2$sales[-nrow(data2)]
+
+    x_star <- data2$advertising[-1] -
+      rho * data2$advertising[-nrow(data2)]
+
+    model <- lm(y_star ~ x_star)
+
+    sum(resid(model)^2)
+  })
+)
+
+hasil_fine2[which.min(hasil_fine2$SSE), ]
+```
+
+Setelah dilakukan pencarian rho yang lebih rinci di sekitar nilai awal 0.90, diperoleh nilai rho = 0.903 yang menghasilkan SSE terkecil, yaitu sebesar 1.291226. Oleh karena itu, rho = 0.903 dipilih sebagai nilai rho optimal dalam metode Hildreth-Lu.
+
+```{r}
+rho_hl2 <- 0.903
+```
+
+# Model Hildreth-Lu
+```{r}
+y_star_hl2 <- data2$sales[-1] -
+  rho_hl2 * data2$sales[-nrow(data2)]
+
+x_star_hl2 <- data2$advertising[-1] -
+  rho_hl2 * data2$advertising[-nrow(data2)]
+
+model_hl2 <- lm(
+  y_star_hl2 ~ x_star_hl2
+)
+
+summary(model_hl2)
+```
+
+Berdasarkan hasil estimasi Hildreth-Lu dengan rho = 0.903, diperoleh model pada data yang telah ditransformasi dengan intercept sebesar 0.99401 dan koefisien Advertising sebesar 0.48869. Koefisien Advertising bernilai positif dan signifikan pada taraf 5% dengan p-value sebesar 1.39e-07. Hal ini menunjukkan bahwa Advertising memiliki hubungan positif dan signifikan terhadap Sales setelah dilakukan transformasi. Nilai R-squared sebesar 0.532 menunjukkan bahwa 53.2% variasi Sales pada data transformasi dapat dijelaskan oleh Advertising.
+
+```{r}
+beta0_hl2 <- coef(model_hl2)[1] / (1 - rho_hl2)
+beta1_hl2 <- coef(model_hl2)[2]
+
+beta0_hl2
+beta1_hl2
+```
+
+Setelah intercept dikembalikan ke skala awal, diperoleh model Hildreth-Lu yaitu Sales = 10.24749 + 0.4886925 Advertising. Koefisien Advertising bernilai positif sebesar 0.4886925, yang menunjukkan bahwa setiap peningkatan Advertising sebesar 1 satuan diperkirakan akan meningkatkan Sales sebesar sekitar 0.489 satuan. Hasil ini menunjukkan adanya hubungan positif antara Advertising dan Sales setelah dilakukan penanganan autokorelasi menggunakan metode Hildreth-Lu.
+
+# Plot Pemilihan Rho
+```{r}
+plot(
+  hasil_fine2$rho,
+  hasil_fine2$SSE,
+  type = "l",
+  xlab = expression(rho),
+  ylab = "SSE",
+  main = "Pemilihan rho dengan Metode Hildreth-Lu"
+)
+
+points(
+  rho_hl2,
+  min(hasil_fine2$SSE),
+  pch = 19
+)
+```
+
+Berdasarkan grafik pemilihan ρ dengan metode Hildreth-Lu, nilai SSE menurun hingga mencapai nilai minimum pada ρ = 0.903, kemudian meningkat kembali setelah nilai tersebut. Nilai SSE minimum yang diperoleh sebesar 1.291226. Oleh karena itu, ρ = 0.903 dipilih sebagai nilai ρ optimal untuk metode Hildreth-Lu.
+
+# DW Hildreth-Lu
+```{r}
+dwtest(model_hl2)
+```
+
+Berdasarkan uji Durbin-Watson pada model Hildreth-Lu, diperoleh nilai DW sebesar 1.9393 dengan p-value sebesar 0.378. Karena p-value > 0.05, maka H₀ tidak ditolak sehingga tidak terdapat bukti adanya autokorelasi positif pada sisaan. Nilai DW yang mendekati 2 juga menunjukkan bahwa autokorelasi pada sisaan telah berhasil ditangani menggunakan metode Hildreth-Lu.
+
+# Kesimpulan
+Berdasarkan hasil analisis, model OLS menunjukkan adanya hubungan positif antara Advertising dan Sales. Namun, hasil plot sisaan dan uji Durbin-Watson (DW = 0.16204; p-value < 0.05) menunjukkan adanya autokorelasi positif pada sisaan. Oleh karena itu, dilakukan penanganan menggunakan metode Cochrane-Orcutt dan Hildreth-Lu. Cochrane-Orcutt menghasilkan model Sales = 10.2524 + 0.4885 Advertising dengan DW setelah transformasi sebesar 1.93925. Sementara itu, Hildreth-Lu menghasilkan rho optimal sebesar 0.903 dan model Sales = 10.24749 + 0.48869 Advertising dengan DW sebesar 1.9393. Kedua metode menghasilkan nilai DW yang mendekati 2 dan p-value > 0.05, sehingga autokorelasi positif pada sisaan sudah berhasil ditangan

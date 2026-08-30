@@ -1,0 +1,278 @@
+---
+title: "Tugas MPDW Praktikum 2"
+author: "Fitria Angelita Delvi"
+date: "2026-08-30"
+output: html_document
+---
+
+# Input Data
+```{r}
+data <- data.frame(
+  period = 1:20,
+  
+  market_share = c(
+    3.63, 4.20, 3.33, 4.54, 2.89,
+    4.87, 4.90, 5.29, 6.18, 7.20,
+    7.25, 6.09, 6.80, 8.65, 8.43,
+    8.29, 7.18, 7.90, 8.45, 8.23
+  ),
+  
+  price = c(
+    0.97, 0.95, 0.99, 0.91, 0.98,
+    0.90, 0.89, 0.86, 0.85, 0.82,
+    0.79, 0.83, 0.81, 0.77, 0.76,
+    0.80, 0.83, 0.79, 0.76, 0.78
+  )
+)
+View(data)
+```
+
+# Eksplorasi Data
+```{r}
+str(data)
+```
+
+```{r}
+summary(data)
+```
+
+# Hubungan Price dengan Market 
+```{r}
+plot(
+  data$price,
+  data$market_share,
+  pch = 19,
+  xlab = "Price",
+  ylab = "Market Share",
+  main = "Scatterplot Price vs Market Share"
+)
+
+abline(
+  lm(market_share ~ price, data = data),
+  lwd = 2
+)
+```
+
+```{r}
+cor(data$price, data$market_share)
+```
+
+Berdasarkan scatterplot, terdapat kecenderungan hubungan linear negatif antara Price dan Market share. Hal ini menunjukkan bahwa peningkatan Price cenderung diikuti oleh penurunan Market share. Nilai korelasi sebesar -0.975 menunjukkan hubungan linear negatif yang sangat kuat antara kedua peubah.
+
+# Bangun Model OLS
+```{r}
+model_ols <- lm(
+  market_share ~ price,
+  data = data
+)
+```
+
+```{r}
+summary(model_ols)
+```
+
+Koefisien Price sebesar -24.290 menunjukkan bahwa Price memiliki hubungan negatif dengan Market Share. Artinya, setiap kenaikan Price sebesar 1 satuan akan menurunkan Market Share sebesar 24.290 satuan. Koefisien Price signifikan karena nilai p-value sebesar 3.02e-13 lebih kecil dari 0.05.
+
+Nilai R-squared sebesar 0.9511 menunjukkan bahwa sebesar 95.11% variasi Market Share dapat dijelaskan oleh Price, sedangkan 4.89% sisanya dijelaskan oleh faktor lain yang tidak terdapat dalam model. Hasil uji F juga menunjukkan bahwa model regresi secara keseluruhan signifikan karena p-value sebesar 3.019e-13 lebih kecil dari 0.05.
+
+# Cek Residual Model OLS
+```{r}
+resid_ols <- residuals(model_ols)
+```
+
+```{r}
+data$resid_ols <- resid_ols
+
+View(data)
+```
+
+# Plot Residual OLS
+```{r}
+plot(
+  data$period,
+  resid_ols,
+  type = "b",
+  pch = 19,
+  xlab = "Urutan Observasi",
+  ylab = "Sisaan",
+  main = "Plot Sisaan Model OLS"
+)
+
+abline(h = 0, lty = 2)
+```
+
+Dari plot sisaan terlihat bahwa sisaan belum menyebar secara acak di sekitar nol dan terdapat pola pada beberapa observasi yang berurutan. Hal ini mengindikasikan adanya autokorelasi pada sisaan, sehingga perlu dilakukan pengecekan lebih lanjut menggunakan Durbin-Watson.
+
+#Uji Durbin-Watson OLS
+```{r}
+library(lmtest)
+```
+
+```{r}
+dwtest(model_ols)
+```
+
+Berdasarkan uji Durbin-Watson diperoleh nilai DW sebesar 1.1358 dengan p-value sebesar 0.009813. Karena p-value < 0.05, maka H0 ditolak. Jadi, dapat disimpulkan bahwa terdapat autokorelasi positif pada sisaan model OLS. Oleh karena itu, perlu dilakukan penanganan autokorelasi menggunakan metode Cochrane-Orcutt dan Hildreth-Lu.
+
+# Cochrane-Orcutt
+```{r}
+library(orcutt)
+```
+
+```{r}
+model_co <- cochrane.orcutt(model_ols)
+```
+
+```{r}
+summary(model_co)
+```
+
+Berdasarkan hasil Cochrane-Orcutt, diperoleh persamaan Market Share = 26.7221 - 24.0841 Price. Koefisien Price bernilai negatif dan signifikan dengan p-value sebesar 5.903e-10. Nilai R-squared sebesar 0.9008 menunjukkan bahwa 90.08% variasi Market Share dapat dijelaskan oleh Price. Setelah dilakukan transformasi Cochrane-Orcutt, nilai Durbin-Watson meningkat dari 1.13582 menjadi 1.95804 dengan p-value sebesar 0.4151. Karena p-value > 0.05, tidak terdapat bukti adanya autokorelasi positif pada sisaan setelah transformasi. Dengan demikian, metode Cochrane-Orcutt berhasil mengatasi autokorelasi pada model.
+
+# Residual Hasil Cochrane-Orcutt
+```{r}
+resid_co <- residuals(model_co)
+```
+
+```{r}
+plot(
+  resid_co,
+  type = "b",
+  pch = 19,
+  xlab = "Urutan Observasi",
+  ylab = "Sisaan",
+  main = "Plot Sisaan Setelah Cochrane-Orcutt"
+)
+
+abline(h = 0, lty = 2)
+```
+
+# Hildreth-LU
+```{r}
+hildreth_lu <- function(rho, data) {
+  
+  y <- data$market_share
+  x <- data$price
+  
+  # Transformasi
+  y_star <- y[-1] - rho * y[-length(y)]
+  x_star <- x[-1] - rho * x[-length(x)]
+  
+  # Regresi transformasi
+  model <- lm(y_star ~ x_star)
+  
+  # SSE
+  sse <- sum(residuals(model)^2)
+  
+  return(sse)
+}
+```
+
+```{r}
+rho_grid <- seq(0, 0.99, by = 0.01)
+```
+
+```{r}
+sse_grid <- sapply(
+  rho_grid,
+  hildreth_lu,
+  data = data
+)
+```
+
+```{r}
+hasil_hl <- data.frame(
+  rho = rho_grid,
+  SSE = sse_grid
+)
+```
+
+```{r}
+hasil_hl[which.min(hasil_hl$SSE), ]
+```
+
+Berdasarkan pencarian nilai rho dari 0 sampai 0.99 dengan interval 0.01, diperoleh nilai rho = 0.43 yang menghasilkan nilai SSE terkecil, yaitu sebesar 2.659433. Oleh karena itu, nilai rho = 0.43 dipilih sebagai nilai awal untuk kemudian dilakukan pencarian yang lebih rinci di sekitar nilai tersebut.
+
+# Perhalus Nilai Rho
+```{r}
+rho_fine <- seq(0.40, 0.45, by = 0.001)
+```
+
+```{r}
+sse_fine <- sapply(
+  rho_fine,
+  hildreth_lu,
+  data = data
+)
+```
+
+```{r}
+hasil_fine <- data.frame(
+  rho = rho_fine,
+  SSE = sse_fine
+)
+```
+
+```{r}
+hasil_fine[which.min(hasil_fine$SSE), ]
+```
+
+Setelah rho diperhalus, diperoleh rho = 0.425 dengan SSE terkecil sebesar 2.659368. Oleh karena itu, rho = 0.425 digunakan sebagai nilai rho optimal pada metode Hildreth-Lu.
+
+# Model Hildreth-LU
+```{r}
+rho_hl <- 0.425
+
+y_star_hl <- data$market_share[-1] -
+  rho_hl * data$market_share[-length(data$market_share)]
+
+x_star_hl <- data$price[-1] -
+  rho_hl * data$price[-length(data$price)]
+
+model_hl <- lm(
+  y_star_hl ~ x_star_hl
+)
+
+summary(model_hl)
+```
+
+```{r}
+beta0_hl <- coef(model_hl)[1] / (1 - rho_hl)
+
+beta1_hl <- coef(model_hl)[2]
+
+beta0_hl
+beta1_hl
+```
+
+Dengan nilai rho = 0.425, diperoleh model pada data yang telah ditransformasi. Setelah intercept dikembalikan ke skala awal, diperoleh model Market Share = 26.72268 - 24.08484 Price. Setelah intercept dikembalikan ke skala awal, diperoleh intercept sebesar 26.72268, sedangkan koefisien Price sebesar -24.08484. Dengan demikian, model Hildreth-Lu pada skala awal adalah Market Share = 26.72268 - 24.08484 Price.
+
+# Durbin-Watson Hildreth-LU
+```{r}
+dwtest(model_hl)
+```
+
+Berdasarkan uji Durbin-Watson setelah dilakukan metode Hildreth-Lu, diperoleh nilai DW sebesar 1.9577 dengan p-value sebesar 0.4148. Karena p-value > 0.05, maka H0 tidak ditolak. Dengan demikian, tidak terdapat bukti adanya autokorelasi positif pada sisaan setelah transformasi. Nilai DW yang mendekati 2 menunjukkan bahwa autokorelasi pada sisaan telah berhasil ditangani menggunakan metode Hildreth-Lu.
+
+# Plot SSE Hildreth-LU
+```{r}
+plot(
+  hasil_fine$rho,
+  hasil_fine$SSE,
+  type = "l",
+  xlab = expression(rho),
+  ylab = "SSE",
+  main = "Pemilihan rho dengan Metode Hildreth-Lu"
+)
+
+points(
+  rho_hl,
+  min(hasil_fine$SSE),
+  pch = 19
+)
+```
+
+Berdasarkan grafik pemilihan rho dengan metode Hildreth-Lu, nilai SSE semakin menurun ketika rho mendekati 0.425, kemudian kembali meningkat setelah melewati nilai tersebut. Nilai SSE terkecil diperoleh pada rho = 0.425 dengan SSE sebesar 2.659368. Oleh karena itu, rho = 0.425 dipilih sebagai nilai rho yang optimal dalam metode Hildreth-Lu.
+
+# Kesimpulan: Perbandingan 3 Model
+Hasil OLS menunjukkan adanya hubungan negatif yang signifikan antara Price dan Market Share, dengan R-squared sebesar 0.9511. Namun, hasil plot sisaan dan uji Durbin-Watson menunjukkan adanya autokorelasi positif pada sisaan (DW = 1.1358; p-value = 0.009813). Autokorelasi kemudian ditangani menggunakan Cochrane-Orcutt dan Hildreth-Lu. Cochrane-Orcutt menghasilkan DW sebesar 1.9580, sedangkan Hildreth-Lu menghasilkan DW sebesar 1.9577. Kedua nilai tersebut mendekati 2 dan memiliki p-value > 0.05, sehingga autokorelasi pada sisaan sudah berhasil ditangani. Hasil model dari kedua metode juga sangat mirip, sehingga keduanya memberikan hasil yang hampir sama.
