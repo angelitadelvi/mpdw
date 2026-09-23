@@ -1,0 +1,195 @@
+---
+title: "Tugas Praktikum 4 - Proses AR(2)"
+author: "Fitria Angelita Delvi"
+date: "2026-09-23"
+output: html_document
+---
+
+# 1. Bangkitkan AR(2) Secara Manual
+```{r}
+set.seed(123)
+
+n <- 300
+
+e <- rnorm(n, mean = 0, sd = 1)
+
+Y_manual <- numeric(n)
+
+Y_manual[1] <- e[1]
+Y_manual[2] <- e[2]
+
+for (t in 3:n) {
+  Y_manual[t] <- 
+    0.5 * Y_manual[t - 1] +
+    0.2 * Y_manual[t - 2] +
+    e[t]
+}
+
+head(Y_manual)
+```
+Berdasarkan hasil pembangkitan secara manual, diperoleh 300 data dari proses AR(2) dengan \(\phi_1=0,5\) dan \(\phi_2=0,2\). Enam pengamatan pertama yang diperoleh berturut-turut adalah -0,5605; -0,2302; 1,3315; 0,6902; 0,7407; dan 2,2235. Nilai-nilai tersebut menunjukkan adanya fluktuasi dari waktu ke waktu. Pada proses AR(2), nilai \(Y_t\) dipengaruhi oleh dua pengamatan sebelumnya, yaitu \(Y_{t-1}\) dan \(Y_{t-2}\), serta error pada periode tersebut.
+
+# 2. Bangkitkan AR(2) dengan arima.sim
+```{r}
+set.seed(123)
+
+Y_arima <- arima.sim(
+  model = list(ar = c(0.5, 0.2)),
+  n = 300
+)
+
+head(Y_arima)
+```
+Berdasarkan hasil pembangkitan menggunakan fungsi arima.sim(), diperoleh 300 data dari proses AR(2) dengan parameter \(\phi_1=0,5\) dan \(\phi_2=0,2\). Enam pengamatan pertama yang dihasilkan adalah -2,9519; -1,0048; -0,9394; -1,8088; 0,1615; dan 0,1455. Nilai-nilai tersebut menunjukkan adanya fluktuasi pada data yang dihasilkan oleh proses autoregresif. Pada model AR(2), nilai saat ini dipengaruhi oleh dua nilai sebelumnya serta error pada periode tersebut.
+
+# 3. Plot Time Series
+```{r}
+plot(
+  Y_manual,
+  type = "l",
+  main = "Time Series AR(2)",
+  xlab = "Waktu",
+  ylab = "Yt"
+)
+```
+Berdasarkan plot time series AR(2), data terlihat berfluktuasi di sekitar nilai rata-rata yang relatif konstan, yaitu di sekitar nol. Tidak terlihat adanya pola tren naik atau tren turun yang sistematis. Fluktuasi data juga relatif stabil sepanjang periode pengamatan, meskipun terdapat beberapa nilai yang cukup tinggi dan rendah. Dengan demikian, berdasarkan plot time series, data dapat dikatakan stasioner karena rata-rata dan variansnya relatif stabil sepanjang waktu.
+
+# 4. Plot ACF
+```{r}
+acf(
+  Y_manual,
+  main = "ACF AR(2)"
+)
+```
+Berdasarkan plot ACF AR(2), terlihat bahwa nilai autokorelasi pada lag awal cukup tinggi dan bernilai positif. Selanjutnya, nilai ACF menurun secara bertahap seiring bertambahnya lag. Beberapa lag awal masih berada di luar batas signifikansi, kemudian nilai ACF semakin mendekati nol. Pola penurunan secara bertahap ini menunjukkan karakteristik tailing off, yang merupakan salah satu ciri dari proses AR(2).
+
+# 5. Plot PACF
+```{r}
+pacf(
+  Y_manual,
+  main = "PACF AR(2)"
+)
+```
+Berdasarkan plot PACF AR(2), terlihat bahwa spike pada lag 1 sangat signifikan dan berada di luar batas signifikansi. Pada lag 2, nilai PACF masih menunjukkan adanya spike positif, meskipun relatif kecil dan berada di sekitar batas signifikansi. Setelah lag 2, sebagian besar nilai PACF berada di dalam batas signifikansi dan berfluktuasi di sekitar nol. Pola tersebut menunjukkan kecenderungan cut-off pada lag 2, yang merupakan karakteristik dari proses AR(2).
+
+# 6. Plot EACF
+```{r}
+library(TSA)
+
+eacf(Y_manual)
+```
+Berdasarkan hasil EACF, pola o mulai terlihat pada baris AR = 2 dan kolom MA = 1, sedangkan posisi AR(2) atau \((p,q)=(2,0)\) masih menunjukkan x. Dengan demikian, hasil EACF pada sampel ini tidak secara langsung mengidentifikasi AR(2) murni sebagai kandidat pertama, tetapi menunjukkan kandidat di sekitar ARMA(2,1). Meskipun demikian, hasil EACF perlu dilihat bersama dengan plot ACF dan PACF. Plot ACF sebelumnya menunjukkan pola tailing off, sedangkan PACF menunjukkan kecenderungan cut-off pada lag 2, sehingga kedua plot tersebut lebih mendukung model AR(2).
+
+# 7. Membuat Daya Yt, Yt-1, Yt-2. Yt-3
+```{r}
+Y_t  <- Y_manual[4:300]
+Y_t1 <- Y_manual[3:299]
+Y_t2 <- Y_manual[2:298]
+Y_t3 <- Y_manual[1:297]
+```
+
+# 8. Scatterplot Yt vs Yt-1
+```{r}
+plot(
+  Y_t1,
+  Y_t,
+  main = "Scatterplot Yt vs Yt-1",
+  xlab = "Yt-1",
+  ylab = "Yt"
+)
+```
+Berdasarkan scatterplot \(Y_t\) terhadap \(Y_{t-1}\), terlihat adanya kecenderungan hubungan linear positif. Hal ini ditunjukkan oleh pola titik-titik yang cenderung bergerak dari kiri bawah menuju kanan atas. Artinya, ketika nilai \(Y_{t-1}\) meningkat, nilai \(Y_t\) juga cenderung meningkat. Hubungan tersebut cukup terlihat, tetapi tidak sempurna karena titik-titik masih menyebar. Hasil ini sesuai dengan karakteristik model AR(2), di mana nilai \(Y_t\) dipengaruhi oleh nilai pada periode sebelumnya.
+
+# Scatterplot Yt vs Yt-2
+```{r}
+plot(
+  Y_t2,
+  Y_t,
+  main = "Scatterplot Yt vs Yt-2",
+  xlab = "Yt-2",
+  ylab = "Yt"
+)
+```
+Berdasarkan scatterplot \(Y_t\) terhadap \(Y_{t-2}\), terlihat adanya kecenderungan hubungan linear positif. Hal ini ditunjukkan oleh pola titik-titik yang secara umum bergerak dari kiri bawah menuju kanan atas. Artinya, ketika nilai \(Y_{t-2}\) meningkat, nilai \(Y_t\) cenderung meningkat. Namun, titik-titik masih cukup menyebar sehingga hubungan tersebut tidak terlalu kuat. Hasil ini sesuai dengan karakteristik model AR(2), karena \(Y_t\) dipengaruhi secara langsung oleh \(Y_{t-2}\) dengan koefisien \(\phi_2=0,2\).
+
+# 10. Scatterplot Yt vs Yt-3
+```{r}
+plot(
+  Y_t3,
+  Y_t,
+  main = "Scatterplot Yt vs Yt-3",
+  xlab = "Yt-3",
+  ylab = "Yt"
+)
+```
+Berdasarkan scatterplot \(Y_t\) terhadap \(Y_{t-3}\), terlihat adanya kecenderungan hubungan linear positif, tetapi titik-titik pengamatan lebih menyebar. Hal ini menunjukkan bahwa hubungan antara \(Y_t\) dan \(Y_{t-3}\) masih ada, tetapi relatif lebih lemah dibandingkan hubungan pada lag 1 dan lag 2. Kondisi ini sesuai dengan karakteristik proses AR(2), di mana pengaruh nilai masa lalu tidak langsung terputus setelah lag 2, melainkan diteruskan secara bertahap melalui hubungan autoregresif.
+
+# 11. ACF Data Bangkitan
+```{r}
+acf_result <- acf(
+  Y_manual,
+  plot = FALSE
+)
+
+data.frame(
+  Lag = 1:3,
+  ACF_Data = as.numeric(acf_result$acf[1:3])
+)
+```
+Berdasarkan hasil perhitungan ACF pada data bangkitan AR(2), diperoleh nilai autokorelasi sebesar 0,5507 pada lag 1, 0,4026 pada lag 2, dan 0,3007 pada lag 3. Nilai ACF seluruhnya positif dan mengalami penurunan seiring bertambahnya lag. Hal ini menunjukkan bahwa pengamatan saat ini masih memiliki hubungan positif dengan pengamatan pada periode sebelumnya, tetapi kekuatan hubungan tersebut semakin melemah ketika jarak waktunya semakin jauh.
+
+# 12. Autokorelasi Data Bangkitan dengan cor()
+```{r}
+cat(
+  "ACF lag 1 =", cor(Y_t, Y_t1), "\n"
+)
+
+cat(
+  "ACF lag 2 =", cor(Y_t, Y_t2), "\n"
+)
+
+cat(
+  "ACF lag 3 =", cor(Y_t, Y_t3), "\n"
+)
+```
+Berdasarkan hasil perhitungan autokorelasi menggunakan fungsi cor(), diperoleh nilai autokorelasi sebesar 0,5554 pada lag 1, 0,4082 pada lag 2, dan 0,3033 pada lag 3. Seluruh nilai autokorelasi bernilai positif dan menunjukkan pola yang semakin menurun ketika lag bertambah. Hal ini menunjukkan bahwa \(Y_t\) memiliki hubungan positif dengan nilai-nilai sebelumnya, tetapi kekuatan hubungan tersebut semakin melemah pada periode yang lebih jauh.
+
+# 13. Autokorelasi Teoritis AR(2)
+```{r}
+phi1 <- 0.5
+phi2 <- 0.2
+
+rho1 <- phi1 / (1 - phi2)
+rho2 <- phi1 * rho1 + phi2
+rho3 <- phi1 * rho2 + phi2 * rho1
+
+cat(
+  "ACF teoritis lag 1 =", rho1, "\n"
+)
+cat(
+  "ACF teoritis lag 2 =", rho2, "\n"
+)
+cat(
+  "ACF teoritis lag 3 =", rho3, "\n"
+)
+```
+Berdasarkan perhitungan teoritis, diperoleh nilai autokorelasi sebesar 0,6250 pada lag 1, 0,5125 pada lag 2, dan 0,38125 pada lag 3. Seluruh nilai autokorelasi bernilai positif dan mengalami penurunan seiring bertambahnya lag. Hal ini menunjukkan bahwa hubungan antara \(Y_t\) dengan pengamatan sebelumnya semakin lemah ketika jarak waktunya semakin jauh.
+
+# 14. Tabel Perbndingan ACF Data vs Teoritis
+```{r}
+hasil_acf <- data.frame(
+  Lag = 1:3,
+  ACF_Data = as.numeric(acf_result$acf[1:3]),
+  ACF_Teoritis = c(
+    rho1,
+    rho2,
+    rho3
+  )
+)
+
+hasil_acf
+```
+Berdasarkan perbandingan antara ACF data hasil bangkitan dan ACF teoritis, terlihat bahwa nilai ACF data pada lag 1, 2, dan 3 masing-masing sebesar 0,5507; 0,4026; dan 0,3007, sedangkan nilai ACF teoritis masing-masing sebesar 0,6250; 0,5125; dan 0,38125. Nilai ACF hasil bangkitan lebih rendah dibandingkan nilai teoritis, tetapi keduanya menunjukkan pola yang sama, yaitu bernilai positif dan menurun seiring bertambahnya lag.
+
+# 15. Kesimpulan
+Secara keseluruhan, ACF empiris mendekati pola ACF teoritis AR(2), yaitu autokorelasi positif yang semakin menurun pada lag yang lebih tinggi. Oleh karena itu, hasil simulasi dapat dikatakan telah menggambarkan karakteristik proses AR(2) dengan cukup baik.

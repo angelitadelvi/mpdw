@@ -1,0 +1,191 @@
+---
+title: "Tugas Praktikum 4 - Proses MA(2)"
+author: "Fitria Angelita Delvi"
+date: "2026-09-23"
+output: html_document
+---
+
+# 1. Bangkitkan MA(2) secara manual
+```{r}
+set.seed(123)
+
+n <- 300
+
+e <- rnorm(n + 2, mean = 0, sd = 1)
+
+Y_manual <- numeric(n)
+
+for (t in 1:n) {
+  Y_manual[t] <- e[t + 2] +
+    0.4 * e[t + 1] +
+    0.6 * e[t]
+}
+
+head(Y_manual)
+```
+Berdasarkan hasil pembangkitan secara manual, diperoleh 300 data dari proses MA(2) dengan parameter \(\theta_1=0.4\) dan \(\theta_2=0.6\). Enam pengamatan pertama menunjukkan nilai yang berfluktuasi, baik positif maupun negatif. Fluktuasi tersebut terjadi karena nilai \(Y_t\) dipengaruhi oleh error pada periode sekarang serta dua periode sebelumnya, yaitu \(e_t\), \(e_{t-1}\), dan \(e_{t-2}\).
+
+# 2. Bangkitkan MA(2) dengan arima.sim
+```{r}
+set.seed(123)
+
+Y_arima <- arima.sim(
+  model = list(ma = c(0.4, 0.6)),
+  n = 300
+)
+
+head(Y_arima)
+```
+Berdasarkan hasil pembangkitan menggunakan fungsi arima.sim(), diperoleh 300 data dengan model MA(2) dan parameter \(\theta_1=0.4\) serta \(\theta_2=0.6\). Pembangkitan dengan arima.sim() digunakan sebagai cara otomatis untuk menghasilkan data dari model MA(2). Hasilnya memiliki karakteristik yang sama dengan model MA(2) yang dibangkitkan secara manual.
+
+# 3. Plot Time Series
+```{r}
+plot(Y_manual,
+     type = "l",
+     main = "Time Series MA(2)",
+     xlab = "Waktu",
+     ylab = "Yt")
+```
+Berdasarkan plot time series, data MA(2) berfluktuasi di sekitar nilai rata-rata yang relatif konstan. Tidak terlihat adanya tren naik maupun tren turun yang sistematis dan variabilitas data relatif stabil sepanjang waktu. Oleh karena itu, berdasarkan plot time series, data dapat dikatakan stasioner.
+
+# 4. Plot ACF
+```{r}
+acf(Y_manual,
+    main = "ACF MA(2)")
+```
+Berdasarkan plot ACF, terlihat bahwa autokorelasi pada lag 1 dan lag 2 bernilai positif dan berada di luar batas signifikansi. Setelah lag 2, nilai autokorelasi cenderung mendekati nol dan berada di dalam batas signifikansi. Dengan demikian, ACF mengalami cut-off setelah lag 2. Pola tersebut merupakan karakteristik dari proses MA(2), sehingga hasil ACF mendukung model MA(2) yang digunakan.
+
+# 5. Plot PACF
+```{r}
+pacf(Y_manual,
+     main = "PACF MA(2)")
+```
+Berdasarkan plot PACF, terlihat beberapa spike pada lag awal, kemudian nilai partial autocorrelation cenderung mengecil dan berfluktuasi di sekitar nol. Tidak terdapat pola cut-off yang jelas pada lag tertentu. Dengan demikian, PACF menunjukkan pola tailing off, yang sesuai dengan karakteristik proses MA(2).
+
+# 6. Plot EACF
+```{r}
+library(TSA)
+eacf(Y_manual)
+```
+Berdasarkan hasil EACF, identifikasi dilakukan dengan melihat pola segitiga o pada tabel EACF. Pada posisi \((p,q)=(0,2)\) diperoleh simbol o, sehingga kandidat model yang diperoleh adalah ARMA(0,2), yang ekuivalen dengan MA(2). Hasil EACF tersebut sesuai dengan model yang digunakan dalam pembangkitan data.
+
+# 7. Membuat Lag
+```{r}
+Y_t  <- Y_manual[4:300]
+Y_t1 <- Y_manual[3:299]
+Y_t2 <- Y_manual[2:298]
+Y_t3 <- Y_manual[1:297]
+```
+
+# 8. Scatterplot Yt dengan Yt-1
+```{r}
+plot(
+  Y_t1,
+  Y_t,
+  main = "Scatterplot Yt vs Yt-1",
+  xlab = "Yt-1",
+  ylab = "Yt"
+)
+```
+Berdasarkan scatterplot \(Y_t\) terhadap \(Y_{t-1}\), terlihat adanya kecenderungan hubungan linear positif. Artinya, ketika nilai \(Y_{t-1}\) meningkat, nilai \(Y_t\) cenderung ikut meningkat. Namun, titik-titik masih cukup menyebar sehingga hubungan tersebut tidak bersifat sempurna. Hasil ini sesuai dengan autokorelasi lag 1 yang bernilai positif.
+
+# 9. Scatterplot Yt dengan Yt-2
+```{r}
+plot(
+  Y_t2,
+  Y_t,
+  main = "Scatterplot Yt vs Yt-2",
+  xlab = "Yt-2",
+  ylab = "Yt"
+)
+```
+Berdasarkan scatterplot \(Y_t\) terhadap \(Y_{t-2}\), terlihat adanya kecenderungan hubungan linear positif meskipun titik-titik pengamatan cukup menyebar. Hal ini menunjukkan bahwa \(Y_t\) masih memiliki hubungan dengan \(Y_{t-2}\). Hasil tersebut sesuai dengan karakteristik MA(2), karena autokorelasi pada lag 2 masih bernilai positif. Secara teoritis, nilai autokorelasi pada lag 2 adalah sebesar 0,3947.
+
+# 10. Scatterplot Yt dengan Yt-3
+```{r}
+plot(
+  Y_t3,
+  Y_t,
+  main = "Scatterplot Yt vs Yt-3",
+  xlab = "Yt-3",
+  ylab = "Yt"
+)
+```
+Berdasarkan scatterplot \(Y_t\) terhadap \(Y_{t-3}\), titik-titik pengamatan terlihat menyebar tanpa membentuk pola hubungan linear yang jelas. Hal ini menunjukkan bahwa hubungan antara \(Y_t\) dan \(Y_{t-3}\) relatif lemah. Kondisi tersebut sesuai dengan karakteristik MA(2), karena autokorelasi teoritis bernilai nol untuk lag yang lebih besar dari 2. Dengan demikian, secara teoritis \(\rho_3=0\).
+
+# 11. Autokorelasi dari data bangkitan
+```{r}
+acf_result <- acf(Y_manual, plot = FALSE)
+
+print(acf_result$lag[1:5])
+print(acf_result$acf[1:5])
+
+data.frame(
+  Lag = as.numeric(acf_result$lag[1:5]),
+  ACF = as.numeric(acf_result$acf[1:5])
+)
+```
+Berdasarkan hasil perhitungan ACF dari data bangkitan, diperoleh autokorelasi sebesar 0,3929 pada lag 1, 0,3015 pada lag 2, dan -0,0587 pada lag 3. Autokorelasi pada lag 1 dan lag 2 masih bernilai positif, sedangkan pada lag 3 nilainya sudah mendekati nol. Pola tersebut menunjukkan bahwa hubungan serial pada data terutama terdapat sampai lag 2, sesuai dengan karakteristik proses MA(2).
+
+# 12. Autokorelasi menggunakan korelasi
+```{r}
+cat(
+  "ACF lag 1 =", cor(Y_t, Y_t1), "\n"
+)
+
+cat(
+  "ACF lag 2 =", cor(Y_t, Y_t2), "\n"
+)
+
+cat(
+  "ACF lag 3 =", cor(Y_t, Y_t3), "\n"
+)
+```
+Perhitungan korelasi secara langsung digunakan untuk mengetahui hubungan antara \(Y_t\) dengan nilai pengamatan pada lag 1, lag 2, dan lag 3. Nilai korelasi pada lag 1 dan lag 2 diharapkan bernilai positif, sedangkan pada lag 3 diharapkan mendekati nol. Pola tersebut sesuai dengan karakteristik MA(2), yaitu autokorelasi hanya terdapat sampai lag 2.
+
+# 13. ACF teoritis
+```{r}
+theta1 <- 0.4
+theta2 <- 0.6
+
+rho1 <- (
+  theta1 + theta1 * theta2
+) / (
+  1 + theta1^2 + theta2^2
+)
+
+rho2 <- theta2 / (
+  1 + theta1^2 + theta2^2
+)
+
+rho3 <- 0
+
+
+cat(
+  "ACF teoritis lag 1 =", rho1, "\n"
+)
+
+cat(
+  "ACF teoritis lag 2 =", rho2, "\n"
+)
+
+cat(
+  "ACF teoritis lag 3 =", rho3, "\n"
+)
+```
+Berdasarkan perhitungan teoritis, diperoleh autokorelasi sebesar 0,4211 pada lag 1 dan 0,3947 pada lag 2. Pada lag 3, autokorelasi teoritis bernilai 0. Hal ini menunjukkan bahwa pada proses MA(2), autokorelasi hanya terdapat sampai lag 2 dan bernilai nol pada lag yang lebih besar dari 2.
+
+# 14. Tabel Perbandingan
+```{r}
+hasil_acf <- data.frame(
+  Lag = 1:3,
+  ACF_Data = c(0.39291332, 0.30149334, -0.05871740),
+  ACF_Teoritis = c(rho1, rho2, rho3)
+)
+
+hasil_acf
+```
+Berdasarkan tabel perbandingan, ACF hasil bangkitan pada lag 1 sebesar 0,3929 cukup dekat dengan nilai teoritis sebesar 0,4211. Pada lag 2, ACF hasil bangkitan sebesar 0,3015 masih menunjukkan nilai positif dan mendekati nilai teoritis sebesar 0,3947. Sementara itu, pada lag 3, ACF hasil bangkitan sebesar -0,0587 relatif dekat dengan nilai teoritis 0. Perbedaan antara ACF hasil bangkitan dan ACF teoritis merupakan hal yang wajar karena ACF hasil bangkitan diperoleh dari sampel sebanyak 300 observasi, sedangkan ACF teoritis merupakan karakteristik populasi. Secara keseluruhan, pola ACF hasil bangkitan sesuai dengan karakteristik MA(2), yaitu autokorelasi positif pada lag 1 dan lag 2 serta mendekati nol setelah lag 2.
+
+# 15. Kesimpulan
+Berdasarkan hasil analisis proses MA(2) dengan parameter \(\theta_1=0.4\) dan \(\theta_2=0.6\) menggunakan 300 data, diperoleh bahwa data bersifat stasioner karena berfluktuasi di sekitar rata-rata yang relatif konstan tanpa menunjukkan pola tren. Plot ACF menunjukkan cut-off setelah lag 2, sedangkan PACF menunjukkan pola tailing off. Hasil EACF juga mengidentifikasi kandidat model ARMA(0,2), yang ekuivalen dengan MA(2). Scatterplot menunjukkan adanya hubungan positif antara \(Y_t\) dengan \(Y_{t-1}\) dan \(Y_{t-2}\), sedangkan hubungan dengan \(Y_{t-3}\) relatif lemah. ACF hasil bangkitan pada lag 1, 2, dan 3 berturut-turut adalah 0,3929, 0,3015, dan -0,0587, sedangkan nilai teoritisnya adalah 0,4211, 0,3947, dan 0. Dengan demikian, hasil analisis secara keseluruhan mendukung karakteristik proses MA(2).
